@@ -12,6 +12,8 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
+-include("include/config.erl").
+
 %% Use module name for registered process
 -define(SERVER, ?MODULE).
 
@@ -80,7 +82,11 @@ handle_call(_, _From, S) ->
 handle_cast({got_inv, P, L, Time}, S) ->
     T_INV = S#state.t_inv,
     T_TX = S#state.t_tx,
-    [ ets:insert(T_INV, {Hash, Type, P, Time}) || {Type, Hash} <- L, Type =:= 1, ets:lookup(T_TX, Hash) =:= [] ],
+    %% FIXME: not very efficient/scalable, but will do for now
+    N = length(ets:match(T_INV, {'_' ,'_' ,P , '_'})),
+    %% Relying on fact that N =< MAX_INV_PER_PEER (at list, should be)
+    L1 = lists:sublist(L, ?MAX_INV_PER_PEER - N),
+    [ ets:insert(T_INV, {Hash, Type, P, Time}) || {Type, Hash} <- L1, Type =:= 1, ets:lookup(T_TX, Hash) =:= [] ],
     {noreply, S};
 
 handle_cast({got_getdata, P, L}, S) ->

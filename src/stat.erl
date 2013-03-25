@@ -95,14 +95,19 @@ handle_cast(print, S) ->
     io:format("Cur peers...~b~n", [Npeer]),
     io:format("Relayed TX:.~b~n", [S#state.relayed_tx]),
     io:format("Mempool:~n", []),
-    {N1, N2, N3, T1, T2, T3, T4} = mempool:get_stats(),
-    io:format(" inv table..~b~n", [N1]),
-    io:format(" req table..~b~n", [N2]),
-    io:format(" tx table...~b~n", [N3]),
-    io:format(" check inv..~.4f s~n", [T1]),
-    io:format(" clean inv..~.4f s~n", [T2]),
-    io:format(" clean req..~.4f s~n", [T3]),
-    io:format(" clean tx...~.4f s~n", [T4]),
+    try mempool:get_stats() of
+        {N1, N2, N3, T1, T2, T3, T4} ->
+            io:format(" inv table..~b~n", [N1]),
+            io:format(" req table..~b~n", [N2]),
+            io:format(" tx table...~b~n", [N3]),
+            io:format(" check inv..~.4f s~n", [T1]),
+            io:format(" clean inv..~.4f s~n", [T2]),
+            io:format(" clean req..~.4f s~n", [T3]),
+            io:format(" clean tx...~.4f s~n", [T4])
+    catch
+        E ->
+            io:format("exception: ~p~n", [E])
+    end,
     io:format("Errors:~n", []),
     io:format(" timeout:...~p~n", [S#state.error_timedout]), 
     io:format(" refused:...~p~n", [S#state.error_connrefused]), 

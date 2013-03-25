@@ -105,8 +105,8 @@ handle_cast(print, S) ->
             io:format(" clean req..~.4f s~n", [T3]),
             io:format(" clean tx...~.4f s~n", [T4])
     catch
-        E ->
-            io:format("exception: ~p~n", [E])
+        Error:Reason ->
+            io:format(" exception: ~p:~p~n", [Error, Reason])
     end,
     io:format("Errors:~n", []),
     io:format(" timeout:...~p~n", [S#state.error_timedout]), 

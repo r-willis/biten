@@ -74,6 +74,7 @@ handle_call(get_stats, _From, S) ->
     T2 = S#state.clean_inv_time,
     T3 = S#state.clean_req_time,
     T4 = S#state.clean_tx_time,
+    %timer:sleep(10000), % test case for timeou handling
     {reply, {N1, N2, N3, T1, T2, T3, T4}, S};
 
 handle_call(_, _From, S) ->

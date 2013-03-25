@@ -28,11 +28,13 @@ incoming(Sock) ->
 connect(Host, Port) ->
     %io:format("Connecting to ~p:~p~n", [Host, Port]),
     stat:increment(connect),
-    case gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, false}]) of
+    try gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, false}]) of
         {ok, Socket} ->
             loop(#peer{host=Host, port=Port, socket=Socket});
         {error, R} ->
             stat:increment({error, R})
+    catch
+        Error:Reason -> stat:increment({error, {Error, Reason}})
     end.
 
 loop(#peer{state = new, direction = incoming} = P) ->

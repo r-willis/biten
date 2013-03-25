@@ -62,7 +62,7 @@ stop() ->
                 }).
 
 init([]) ->
-    {ok, #state{start_time = now()}}.
+    {ok, #state{start_time = calendar:universal_time()}}.
 
 handle_call(_Request, _From, S) ->
     {reply, ok, S}.
@@ -85,8 +85,8 @@ handle_cast({increment, Counter, N}, S) ->
     end;
 
 handle_cast(print, S) ->
-    {{Y,M,D},{H,Min,Sec}} = calendar:universal_time(),
-    io:format("Start time..~4..0b.~2..0b.~2..0b ~2..0b:~2..0b:~2..0b UTC~n", [Y, M, D, H, Min, Sec]),
+    io:format("Start time..~s UTC~n", [util:strftime(S#state.start_time)]),
+    io:format("Cur time....~s UTC~n", [util:strftime(calendar:universal_time())]),
     io:format("Connects:...~b~n", [S#state.connects]),
     io:format("Connected:..~b~n", [S#state.connected]),
     io:format("Accepted:...~b~n", [S#state.accepted]),

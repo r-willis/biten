@@ -5,7 +5,7 @@
 %%% --------------------------------------------------------------------------
 
 -module(util).
--export([hexdump/1, ip_to_str/1, crc_to_str/1, senddump/1, startdump/0, dump/0]).
+-export([hexdump/1, ip_to_str/1, crc_to_str/1, senddump/1, startdump/0, dump/0, strftime/1]).
 
 hexdump(B) -> hexdump(B, 0).
 
@@ -48,3 +48,6 @@ dump() ->
         M -> hexdump(M)
     end,
     dump().
+
+strftime({{Y, M, D}, {H, Min, Sec}}) ->
+    io_lib:format("~4..0b.~2..0b.~2..0b ~2..0b:~2..0b:~2..0b", [Y, M, D, H, Min, Sec]).

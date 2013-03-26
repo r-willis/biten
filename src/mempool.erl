@@ -54,29 +54,31 @@ stop() ->
 %%% ==========================================================================
 
 %% process state
--record(state, {t_inv, t_req, t_tx, clean_tx_time, clean_inv_time, clean_req_time, check_inv_time, log}).
+-record(state, {t_inv, t_req, t_tx, t_peer, clean_tx_time, clean_inv_time, clean_req_time, check_inv_time, log}).
 
 init([]) ->
     T = ets:new(inv, [bag]),
     T2 = ets:new(request, [set]),
     T3 = ets:new(tx, [set]),
+    T4 = ets:new(peer, [bag]),
     self() ! check_inv,
     self() ! clean_inv,
     self() ! clean_req,
     self() ! clean_tx,
     {ok, Log} = file:open("log.txt", [write]),
-    {ok, #state{t_inv = T, t_req = T2, t_tx = T3, log = Log}}. 
+    {ok, #state{t_inv = T, t_req = T2, t_tx = T3, t_peer = T4, log = Log}}. 
 
 handle_call(get_stats, _From, S) ->
     N1 = ets:info(S#state.t_inv, size),
     N2 = ets:info(S#state.t_req, size),
     N3 = ets:info(S#state.t_tx, size),
+    N4 = ets:info(S#state.t_peer, size),
     T1 = S#state.check_inv_time,
     T2 = S#state.clean_inv_time,
     T3 = S#state.clean_req_time,
     T4 = S#state.clean_tx_time,
     %timer:sleep(10000), % test case for timeou handling
-    {reply, {N1, N2, N3, T1, T2, T3, T4}, S};
+    {reply, {N1, N2, N3, N4, T1, T2, T3, T4}, S};
 
 handle_call(_, _From, S) ->
     {reply, ok, S}.
@@ -84,13 +86,15 @@ handle_call(_, _From, S) ->
 handle_cast({got_inv, P, L, Time}, S) ->
     T_INV = S#state.t_inv,
     T_TX = S#state.t_tx,
-    %% FIXME: not very efficient/scalable, but will do for now
-    N = length(ets:match(T_INV, {'_' ,'_' ,P , '_'})),
-    %% Relying on fact that N =< MAX_INV_PER_PEER (at list, should be)
-    L1 = lists:sublist(L, ?MAX_INV_PER_PEER - N),
+    T_PEER = S#state.t_peer,
+    N = length(ets:lookup(T_PEER, P)),
+    L1 = [ X || {Type, Hash} = X <- L, Type =:= 1, ets:lookup(T_TX, Hash) =:= []],
+    %% Relying on the fact that N =< MAX_INV_PER_PEER (at list, should be)
+    L2 = lists:sublist(L1, ?MAX_INV_PER_PEER - N),
+    [ ets:insert(T_INV, {Hash, Type, P, Time}) || {Type, Hash} <- L2 ],
+    [ ets:insert(T_PEER, {P, Hash}) || {_, Hash} <- L2 ],
     {MegaSec, Sec, MicroSec} = now(),
     io:format(S#state.log, "~b:~b:~b inv ~p ~b ~b~n", [MegaSec, Sec, MicroSec, P, length(L), N]),
-    [ ets:insert(T_INV, {Hash, Type, P, Time}) || {Type, Hash} <- L1, Type =:= 1, ets:lookup(T_TX, Hash) =:= [] ],
     {noreply, S};
 
 handle_cast({got_getdata, P, L}, S) ->
@@ -107,11 +111,13 @@ handle_cast({got_tx, B, Time}, S) ->
     T_INV = S#state.t_inv,
     T_REQ = S#state.t_req,
     T_TX = S#state.t_tx,
+    T_PEER = S#state.t_peer,
     Hash = b_crypto:hash(B),
     %io:format("GOT TX, requests: ~p~n", [ets:lookup(T_REQ, Hash)]),
     case (ets:lookup(T_REQ, Hash) =/= []) of
         true ->
             %io:format("Got known tx, removing requests~n", []),
+            [ ets:delete_object(T_PEER, {Pid, H})  || {H, _, Pid, _} <- ets:lookup(T_INV, Hash) ],
             ets:delete(T_INV, Hash),
             ets:delete(T_REQ, Hash),
             ets:insert(T_TX, {Hash, B, Time}),
@@ -152,9 +158,10 @@ handle_info(check_inv, S) ->
 
 handle_info(clean_inv, S) ->
     T_INV = S#state.t_inv,
+    T_PEER = S#state.t_peer,
     Now = now(),
     clean_inv(lists:sort(fun({H1, _, _, T1}, {H2, _, _, T2}) -> (H1 > H2) or (H1 =:= H2) and (T1 > T2) end,
-        [ X || [X] <- ets:match(T_INV, '$1')]), T_INV, 0, undefined),
+        [ X || [X] <- ets:match(T_INV, '$1')]), T_INV, T_PEER, 0, undefined),
     timer:send_after(6000, clean_inv),
     %io:format("time clean_inv = ~.4f~n", [timer:now_diff(now(), Now)*1.0e-6]),
     {noreply, S#state{clean_inv_time = timer:now_diff(now(), Now)*1.0e-6}};
@@ -162,11 +169,13 @@ handle_info(clean_inv, S) ->
 handle_info(clean_req, S) ->
     T_INV = S#state.t_inv,
     T_REQ = S#state.t_req,
+    T_PEER = S#state.t_peer,
     Now = now(),
     TimedOut = [ X || [{_, _, _, Time} = X] <- ets:match(T_REQ, '$1'), timer:now_diff(Now, Time) > 20*1000000 ],
     [ ets:delete(T_REQ, Hash) || {Hash,_ ,_ ,_ } <- TimedOut ],
     %% delete from inventory table - next time we will try other peer
     [ ets:match_delete(T_INV, {Hash, Type, Pid, '_'}) || {Hash, Type, Pid, _ } <- TimedOut ],
+    [ ets:delete_object(T_PEER, {Pid, Hash}) || {Hash, _Type, Pid, _ } <- TimedOut ],
     %% re-arm timer
     timer:send_after(10000, clean_req),
     %io:format("time clean_req = ~.4f~n", [timer:now_diff(now(), Now)*1.0e-6]),
@@ -205,16 +214,17 @@ requests([[{Hash, Type, Pid, _Time}]|T], Tab, Res) ->
             requests(T, Tab, Res)
     end.
 
-clean_inv([], _Tab, _N, _Prev) ->
+clean_inv([], _Tab, _TabPeer, _N, _Prev) ->
     ok;
 
-clean_inv([{Hash, _, _, Time} = Obj|T], Tab, N, Prev) ->
+clean_inv([{Hash, _, Pid, Time} = Obj|T], Tab, TabPeer, N, Prev) ->
     N1 = if Hash =:= Prev -> N+1; true -> 1 end,
     Now = now(),
     case (N1 > 10) or (timer:now_diff(Now, Time) > 600*1000000) of
         true ->
-            ets:delete_object(Tab, Obj);
+            ets:delete_object(Tab, Obj),
+            ets:delete_object(TabPeer, {Pid, Hash});
         false ->
             ok
     end,
-    clean_inv(T, Tab, N1, Hash).
+    clean_inv(T, Tab, TabPeer, N1, Hash).

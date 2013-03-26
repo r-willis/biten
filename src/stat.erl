@@ -96,10 +96,11 @@ handle_cast(print, S) ->
     io:format("Relayed TX:.~b~n", [S#state.relayed_tx]),
     io:format("Mempool:~n", []),
     try mempool:get_stats() of
-        {N1, N2, N3, T1, T2, T3, T4} ->
+        {N1, N2, N3, N4, T1, T2, T3, T4} ->
             io:format(" inv table..~b~n", [N1]),
             io:format(" req table..~b~n", [N2]),
             io:format(" tx table...~b~n", [N3]),
+            io:format(" peer table.~b~n", [N4]),
             io:format(" check inv..~.4f s~n", [T1]),
             io:format(" clean inv..~.4f s~n", [T2]),
             io:format(" clean req..~.4f s~n", [T3]),

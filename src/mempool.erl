@@ -54,7 +54,7 @@ stop() ->
 %%% ==========================================================================
 
 %% process state
--record(state, {t_inv, t_req, t_tx, clean_tx_time, clean_inv_time, clean_req_time, check_inv_time}).
+-record(state, {t_inv, t_req, t_tx, clean_tx_time, clean_inv_time, clean_req_time, check_inv_time, log}).
 
 init([]) ->
     T = ets:new(inv, [bag]),
@@ -64,7 +64,8 @@ init([]) ->
     self() ! clean_inv,
     self() ! clean_req,
     self() ! clean_tx,
-    {ok, #state{t_inv = T, t_req = T2, t_tx = T3}}. 
+    {ok, Log} = file:open("log.txt", [write]),
+    {ok, #state{t_inv = T, t_req = T2, t_tx = T3, log = Log}}. 
 
 handle_call(get_stats, _From, S) ->
     N1 = ets:info(S#state.t_inv, size),
@@ -87,6 +88,8 @@ handle_cast({got_inv, P, L, Time}, S) ->
     N = length(ets:match(T_INV, {'_' ,'_' ,P , '_'})),
     %% Relying on fact that N =< MAX_INV_PER_PEER (at list, should be)
     L1 = lists:sublist(L, ?MAX_INV_PER_PEER - N),
+    {MegaSec, Sec, MicroSec} = now(),
+    io:format(S#state.log, "~b:~b:~b inv ~p ~b ~b~n", [MegaSec, Sec, MicroSec, P, length(L), N]),
     [ ets:insert(T_INV, {Hash, Type, P, Time}) || {Type, Hash} <- L1, Type =:= 1, ets:lookup(T_TX, Hash) =:= [] ],
     {noreply, S};
 

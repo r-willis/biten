@@ -14,6 +14,8 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
+-include("include/config.erl").
+
 %% Use module name for registered process
 -define(SERVER, ?MODULE).
 
@@ -109,9 +111,9 @@ handle_info(check_peer_count, S) ->
     N = S#state.peer_count,
     %io:format("Checking peer count, N=~p~n", [N]),
     L = S#state.peer_pool,
-    case N < 1000 of
+    case N < ?MAX_PEERS of
         true  -> 
-            {P, L1} = safe_split(20, L),
+            {P, L1} = safe_split(?CONN_PER_SECOND, L),
             %io:format("spawning ~p new peers~n", [length(P)]),
             %io:format("~p~n", [P]),
             [ supervisor:start_child(peer_sup, [outgoing, {Host, Port}]) || {Host, Port} <- P ];

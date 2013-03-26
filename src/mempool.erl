@@ -7,7 +7,7 @@
 -behaviour(gen_server).
 
 %% API fucntions
--export([start_link/0, get_stats/0, got_inv/1, got_tx/1, got_getdata/1, print/0, stop/0]).
+-export([start_link/0, pause/1, get_stats/0, got_inv/1, got_tx/1, got_getdata/1, print/0, stop/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -44,6 +44,10 @@ got_getdata(L) ->
 %% @doc print contents of memory pool 
 print() ->
     gen_server:cast(?SERVER, print).
+
+%% @doc Pause memory pool process for N milliseconds; useful for testing
+pause(N) ->
+    gen_server:cast(?SERVER, {pause, N} ).
 
 %% @doc Stop memory pool process
 stop() ->
@@ -141,6 +145,10 @@ handle_cast(print, S) ->
     io:format("TX table entries: ~p~n", [length(ets:match(T_TX, '$1'))]),
     {noreply, S};
 
+handle_cast({pause, T}, S) ->
+    timer:sleep(T),
+    {noreply, S};
+
 handle_cast(stop, State) ->
     {stop, normal, State}.
 
@@ -189,6 +197,7 @@ handle_info(clean_tx, S) ->
     timer:send_after(60000, clean_tx),
     %io:format("time clean_tx = ~.4f~n", [timer:now_diff(now(), Now)*1.0e-6]),
     {noreply, S#state{clean_tx_time = timer:now_diff(now(), Now)*1.0e-6}};
+
 
 handle_info(_Msg, S) ->
     {noreply, S}.

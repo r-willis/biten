@@ -58,7 +58,7 @@ loop(#peer{state = version_sent} = P) ->
     end,
     stat:increment(answer),
     %io:format("Version response from ~s:~p:~n", [util:ip_to_str(P#peer.host), P#peer.port]),
-    gen_tcp:send(P#peer.socket, protocol:getaddr_msg()),
+    %gen_tcp:send(P#peer.socket, protocol:getaddr_msg()),
     %gen_tcp:send(P#peer.socket, protocol:ping_msg()),
     Rest = P#peer.rest,
     inet:setopts(P#peer.socket, [{active, once}]),

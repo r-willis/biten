@@ -41,22 +41,22 @@ stop() ->
 %%% ==========================================================================
 
 %% process state
--record(state, {peers}).
+-record(state, {peers, t_peer, t_rand}).
 
 init([]) ->
-    {ok, #state{peers = sets:new()}}. 
+    T_peer = ets:new(peer, [set]),
+    T_rand = ets:new(rand, [set]),
+    {ok, #state{t_peer = T_peer, t_rand = T_rand}}. 
 
 handle_call(get, _From, S) ->
-    {reply, sets:to_list(S#state.peers), S}.
+    L = [ X || [X] <- ets:match(S#state.t_peer, '$1')],
+    {reply, L, S}.
 
 handle_cast({add, L}, S) ->
-    L1 = lists:filter(fun({_, P}) -> P > 0 end, L),
-    NewSet = sets:from_list(L1),
-    netmanager:notify({new_peers, 
-        sets:to_list(sets:subtract(
-            NewSet, S#state.peers))}),
-    NewPeers = sets:union(S#state.peers, NewSet),
-    {noreply, S#state{peers = NewPeers}};
+    L_new = [ X || {_, P} = X <- L, P > 0, ets:lookup(S#state.t_peer, X) =:= [] ],
+    [ ets:insert(S#state.t_peer, {X}) || X <- L_new ],
+    netmanager:notify({new_peers, L_new}),
+    {noreply, S};
 
 handle_cast(stop, State) ->
     {stop, normal, State}.

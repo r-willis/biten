@@ -8,7 +8,7 @@
 -export([hash/1, crc/1]).
 
 hash(Bin) ->
-	sha2:hexdigest256(sha2:hexdigest256(Bin)).
+	erlsha2:sha256(erlsha2:sha256(Bin)).
 
 crc(Bin) ->
 	<<CRC:4/binary, _/binary>> = hash(Bin),

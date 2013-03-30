@@ -89,7 +89,7 @@ format_tx(TX) ->
     [ io_lib:format("Transaction version ~b~n  tx_in_count = ~p~n", [
                         TX#tx.ver, TX#tx.tx_in_count]),
         [ format_tx_in(TX_in) || TX_in <- TX#tx.tx_in ],
-        io_lib:format("  tx_out count = ~b~n", [TX#tx.tx_out_count]),
+        io_lib:format("  tx_out_count = ~b~n", [TX#tx.tx_out_count]),
         [ format_tx_out(TX_out) || TX_out <- TX#tx.tx_out ],
         io_lib:format("  lock time ~b~n", [TX#tx.lock_time]),
        "" 

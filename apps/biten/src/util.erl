@@ -5,7 +5,7 @@
 %%% --------------------------------------------------------------------------
 
 -module(util).
--export([hexdump/1, hex_to_bin/1, to_base58/1, base58_enc/2, ip_to_str/1, crc_to_str/1, senddump/1, startdump/0, dump/0, strftime/1]).
+-export([print_tx_file/1, hexdump/1, hex_to_bin/1, to_base58/1, base58_enc/2, ip_to_str/1, crc_to_str/1, senddump/1, startdump/0, dump/0, strftime/1]).
 
 hexdump(B) -> hexdump(B, 0).
 
@@ -104,8 +104,14 @@ hex_to_bin(S) ->
 
 hex_to_bin([], R) ->
     lists:reverse(R); 
+
 hex_to_bin([$\  | T], R) ->
     hex_to_bin(T, R);
 
 hex_to_bin([A, B | T], R) ->
     hex_to_bin(T, [digit(A)*16+digit(B)|R]).
+
+print_tx_file(F) ->
+    {ok, TX_raw} = file:read_file(F),
+    {_, _, TX, _} = protocol:get_message(TX_raw),
+    io:format("~s", [protocol:format_tx(protocol:parse_tx(TX))]).

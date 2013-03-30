@@ -81,7 +81,7 @@ loop(#peer{state = loop} = P) ->
                     {ok, _, Cmd, _, CRC} = protocol:parse_header(Hdr),
                     case lists:member(Cmd, [unknown]) of
                         true ->
-                            F = io_lib:format("dump/dump_~s_~s.bin", [util:ip_to_str(Host), util:crc_to_str(CRC)]),
+                            F = io_lib:format("dump/dump_~s_~s_~s.bin", [atom_to_list(Cmd), util:ip_to_str(Host), util:crc_to_str(CRC)]),
                             file:write_file(F, [Hdr, Payload]);
                         false -> ok
                     end,
@@ -103,8 +103,8 @@ loop(#peer{state = loop} = P) ->
                             %io:format("Got addr from ~s, n=~b (read ~b).~n", [util:ip_to_str(Host), N, length(L)]),
                             peerdiscovery:add(L);
                         ping ->
-                            io:format("ping received from ~s:~p~n", [util:ip_to_str(Host), P#peer.port]),
-                            protocol:pong_msg(Payload);
+                            %io:format("ping received from ~s:~p~n", [util:ip_to_str(Host), P#peer.port]),
+                            gen_tcp:send(P#peer.socket, protocol:pong_msg(Payload));
                           tx ->
                             mempool:got_tx(Payload);
                      getdata -> 

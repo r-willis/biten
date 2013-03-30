@@ -69,6 +69,58 @@ varint(X) when X =< 16#ffff  -> <<16#fd, X:16/little>>;
 varint(X) when X =< 16#ffffffff  -> <<16#fe, X:32/little>>;
 varint(X) when X =< 16#ffffffffffffffff  -> <<16#ff, X:64/little>>.
 
+-record(tx, {ver, tx_in_count, tx_in, tx_out_count, tx_out, lock_time}).
+
+format_pk_script(<<118, 169, 20, H160:20/bytes, 136, 172>>) ->
+    io_lib:format("OP_DUP OP_HASH160 20 ~s OP_EQUALVERIFY OP_CHECKSIG", [util:base58_enc(0, H160)]);
+
+format_pk_script(<<B/bytes>>) ->
+    io_lib:format("~s", [binary_to_hexstr(B, "")]).
+
+format_tx_in({H, I, Scr, Seq}) ->
+    [io_lib:format("  tx_in~n    hash ~s~n    index ~b~n", [binary_to_hexstr(H, ""), I]),
+     io_lib:format("    script ~s~n    seq ~b~n", [binary_to_hexstr(Scr), Seq])].
+
+format_tx_out({Val, PK_script}) ->
+    [io_lib:format("  tx_out~n    value ~b~n    pk_script ~s~n", [Val,
+                            format_pk_script(PK_script)])].
+
+format_tx(TX) ->
+    [ io_lib:format("Transaction version ~b~n  tx_in_count = ~p~n", [
+                        TX#tx.ver, TX#tx.tx_in_count]),
+        [ format_tx_in(TX_in) || TX_in <- TX#tx.tx_in ],
+        io_lib:format("  tx_out count = ~b~n", [TX#tx.tx_out_count]),
+        [ format_tx_out(TX_out) || TX_out <- TX#tx.tx_out ],
+        io_lib:format("  lock time ~b~n", [TX#tx.lock_time]),
+       "" 
+    ].
+
+parse_tx_in(Rest, R, 0) ->
+    {R, Rest};
+
+parse_tx_in(<<TX_ref:32/bytes, Index:32/little, P/bytes>>, R, N) when N > 0 ->
+    {L, R1} = parse_varint(P),
+    <<Script:L/bytes, Seq:32/little, Rest/bytes>> = R1,
+    parse_tx_in(Rest, [{TX_ref, Index, Script, Seq}|R], N - 1). 
+
+parse_tx_out(Rest, R, 0) ->
+    {R, Rest};
+
+parse_tx_out(<<Value:64/little, P/bytes>>, R, N) when N > 0 ->
+    {L, R1} = parse_varint(P),
+    <<PK_script:L/bytes, Rest/bytes>> = R1,
+    parse_tx_out(Rest, [{Value, PK_script}|R], N - 1). 
+
+
+parse_tx(<<Ver:32/little, B/bytes>>) ->
+    {TX_in_count, R1} = parse_varint(B),
+    {TX_in, R2} = parse_tx_in(R1, [], TX_in_count),
+    {TX_out_count, R3} = parse_varint(R2),
+    {TX_out, R4} = parse_tx_out(R3, [], TX_out_count),
+    <<Lock_time:32/little>> = R4,
+    #tx{ver = Ver, tx_in_count = TX_in_count, tx_in = TX_in, 
+        tx_out_count = TX_out_count, tx_out = TX_out, lock_time = Lock_time}.
+
 parse_inv(B) ->
     {N, R} = parse_varint(B),
     {ok, N, [{T,H} || <<T:32/little, H:32/bytes>> <= R ]}.
@@ -89,17 +141,23 @@ parse_addr(<<>>, L) ->
     L.
 
 parse_header(<<Magic:4/binary, Command:12/binary, Len:32/little, CRC:4/binary>>) ->
-    CommandAtom = case cmd_to_list(Command) of
-        "version" -> version;
-        "verack"  -> verack;
-        "addr"    -> addr;
-        "ping"    -> ping;
-        "pong"    -> pong;
-        "inv"     -> inv;
-        "alert"   -> alert;
-        "getdata" -> getdata;
-           "tx"   -> tx;
-             _    -> unknown
+    Cmd = cmd_to_list(Command),
+    CommandAtom = case lists:member(Cmd, [
+                "version",
+                "verack",
+                "addr",
+                "ping",
+                "pong",
+                "inv",
+                "alert",
+                "getdata",
+                "getblocks",
+                "notfound",
+                "getaddr",
+                "tx"
+            ]) of
+             true  -> list_to_atom(Cmd);
+             false -> unknown
     end,
     {ok, Magic, CommandAtom, Len, CRC}.
 
@@ -109,6 +167,7 @@ parse_message(<<Magic:4/binary, Command:12/binary, Len:32/little, CRC:4/binary,
         CRC -> {ok, Magic, Command, CRC, Payload, Rest};
         _   -> {error, crc, Rest}
     end;
+
 parse_message(Rest) ->
     {error, parse, Rest}.
  

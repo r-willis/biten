@@ -7,6 +7,8 @@
 -module(protocol).
 -compile([export_all]).
 
+-include("include/records.erl").
+
 -define(MAIN_MAGIC, <<16#F9BEB4D9:32/big>>).
 -define(MAGIC, ?MAIN_MAGIC).
 
@@ -69,7 +71,6 @@ varint(X) when X =< 16#ffff  -> <<16#fd, X:16/little>>;
 varint(X) when X =< 16#ffffffff  -> <<16#fe, X:32/little>>;
 varint(X) when X =< 16#ffffffffffffffff  -> <<16#ff, X:64/little>>.
 
--record(tx, {ver, tx_in_count, tx_in, tx_out_count, tx_out, lock_time}).
 
 format_pk_script(<<118, 169, 20, H160:20/bytes, 136, 172>>) ->
     io_lib:format("OP_DUP OP_HASH160 20 ~s OP_EQUALVERIFY OP_CHECKSIG", [util:base58_enc(0, H160)]);

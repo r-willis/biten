@@ -12,7 +12,7 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--include("include/config.erl").
+-include("include/config.hrl").
 
 %% Use module name for registered process
 -define(SERVER, ?MODULE).
@@ -99,6 +99,7 @@ handle_cast({got_inv, P, L, Time}, S) ->
     [ ets:insert(T_PEER, {P, Hash}) || {_, Hash} <- L2 ],
     {MegaSec, Sec, MicroSec} = now(),
     io:format(S#state.log, "~b:~b:~b inv ~p ~b ~b~n", [MegaSec, Sec, MicroSec, P, length(L), N]),
+    %[ io:format(S#state.log, "~b:~b:~b inv1 ~b ~p ~s~n", [MegaSec, Sec, MicroSec, P, T, protocol:binary_to_hexstr(H, "")]) || {T, H} <- L],
     {noreply, S};
 
 handle_cast({got_getdata, P, L}, S) ->

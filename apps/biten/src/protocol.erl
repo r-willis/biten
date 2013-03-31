@@ -7,7 +7,7 @@
 -module(protocol).
 -compile([export_all]).
 
--include("include/records.erl").
+-include("include/records.hrl").
 
 -define(MAIN_MAGIC, <<16#F9BEB4D9:32/big>>).
 -define(MAGIC, ?MAIN_MAGIC).

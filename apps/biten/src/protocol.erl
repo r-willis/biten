@@ -97,7 +97,7 @@ format_tx(TX) ->
     ].
 
 parse_tx_in(Rest, R, 0) ->
-    {R, Rest};
+    {lists:reverse(R), Rest};
 
 parse_tx_in(<<TX_ref:32/bytes, Index:32/little, P/bytes>>, R, N) when N > 0 ->
     {L, R1} = parse_varint(P),
@@ -105,7 +105,7 @@ parse_tx_in(<<TX_ref:32/bytes, Index:32/little, P/bytes>>, R, N) when N > 0 ->
     parse_tx_in(Rest, [{TX_ref, Index, Script, Seq}|R], N - 1). 
 
 parse_tx_out(Rest, R, 0) ->
-    {R, Rest};
+    {lists:reverse(R), Rest};
 
 parse_tx_out(<<Value:64/little, P/bytes>>, R, N) when N > 0 ->
     {L, R1} = parse_varint(P),

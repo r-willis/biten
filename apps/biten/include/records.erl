@@ -1,1 +1,0 @@
--record(tx, {ver, tx_in_count, tx_in, tx_out_count, tx_out, lock_time}).

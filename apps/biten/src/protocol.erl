@@ -11,6 +11,7 @@
 
 -define(MAIN_MAGIC, <<16#F9BEB4D9:32/big>>).
 -define(MAGIC, ?MAIN_MAGIC).
+-define(PROTOCOL_VERSION, <<16#62EA0000:32/big>>).
 
 hexstr_to_binary(S) ->
     T = string:tokens(S, " "),
@@ -29,6 +30,8 @@ make_message(Magic, Command, Payload) ->
         version -> atom_to_cmd(version);
         getaddr -> atom_to_cmd(getaddr);
         getdata -> atom_to_cmd(getdata);
+        getheaders -> atom_to_cmd(getheaders);
+         headers -> atom_to_cmd(headers);
          verack -> atom_to_cmd(verack);
            addr -> atom_to_cmd(addr);
            ping -> atom_to_cmd(ping);
@@ -112,7 +115,6 @@ parse_tx_out(<<Value:64/little, P/bytes>>, R, N) when N > 0 ->
     <<PK_script:L/bytes, Rest/bytes>> = R1,
     parse_tx_out(Rest, [{Value, PK_script}|R], N - 1). 
 
-
 parse_tx(<<Ver:32/little, B/bytes>>) ->
     {TX_in_count, R1} = parse_varint(B),
     {TX_in, R2} = parse_tx_in(R1, [], TX_in_count),
@@ -120,7 +122,14 @@ parse_tx(<<Ver:32/little, B/bytes>>) ->
     {TX_out, R4} = parse_tx_out(R3, [], TX_out_count),
     <<Lock_time:32/little>> = R4,
     #tx{ver = Ver, tx_in_count = TX_in_count, tx_in = TX_in, 
-        tx_out_count = TX_out_count, tx_out = TX_out, lock_time = Lock_time}.
+    tx_out_count = TX_out_count, tx_out = TX_out, lock_time = Lock_time}.
+
+parse_headers(B) ->
+    {N, R} = parse_varint(B),
+    {ok, N, [H || <<H:80/bytes, _C:1/bytes>> <= R ]}.
+
+parse_block_header(<<Ver:32/little, PrevBlock:32/bytes, MerkleRoot:32/bytes, Time:32/little, Diff:4/bytes, Nonce:32/little>>) -> 
+    {Ver, PrevBlock,  MerkleRoot, Time, Diff, Nonce}.
 
 parse_inv(B) ->
     {N, R} = parse_varint(B),
@@ -153,6 +162,8 @@ parse_header(<<Magic:4/binary, Command:12/binary, Len:32/little, CRC:4/binary>>)
                 "alert",
                 "getdata",
                 "getblocks",
+                "getheaders",
+                "headers",
                 "notfound",
                 "getaddr",
                 "tx"
@@ -172,6 +183,11 @@ parse_message(<<Magic:4/binary, Command:12/binary, Len:32/little, CRC:4/binary,
 parse_message(Rest) ->
     {error, parse, Rest}.
  
+getheaders_msg(L, StopHash) ->
+    N = varint(length(L)),
+    HL = << <<Hash/bytes>> || Hash <- L >>,
+    make_message(?MAGIC, getheaders, <<?PROTOCOL_VERSION/bytes, N/bytes, HL/bytes, StopHash/bytes>>).
+
 getdata_msg(L) ->
     N = varint(length(L)),
     Body = <<<<Type:32/little, Hash/bytes>> || {Hash, Type} <- L>>,

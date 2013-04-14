@@ -31,6 +31,7 @@ init([]) ->
              ?CHILD(peerdiscovery, worker),
              ?CHILD(mempool, worker),
              ?CHILD(accepter, worker),
+             ?CHILD(chain, worker),
              ?CHILD_T(bootstrap, worker)
          ]}}.
 

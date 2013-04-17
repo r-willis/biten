@@ -18,7 +18,7 @@ hexstr_to_binary(S) ->
     list_to_binary([list_to_integer(X, 16) || X <- T]).
 
 binary_to_hexstr(B, D) ->
-    string:join([io_lib:format("~2.16.0b", [X]) || <<X>> <= B ], D).
+    util:bin_to_hex(B, D).
 
 binary_to_hexstr(B) ->
     binary_to_hexstr(B, " ").

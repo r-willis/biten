@@ -5,7 +5,7 @@
 %%% --------------------------------------------------------------------------
 
 -module(util).
--export([print_tx_file/1, hexdump/1, hex_to_bin/1, to_base58/1, base58_enc/2, ip_to_str/1, crc_to_str/1, senddump/1, startdump/0, dump/0, strftime/1]).
+-export([print_tx_file/1, hexdump/1, hex_to_bin/1, bin_to_hex/1, bin_to_hex/2, to_base58/1, base58_enc/2, ip_to_str/1, crc_to_str/1, senddump/1, startdump/0, dump/0, strftime/1]).
 -export([take_random/2, take_random/3, random_element/1, random_element/2]).
 
 hexdump(B) -> hexdump(B, 0).
@@ -111,6 +111,12 @@ hex_to_bin([$\  | T], R) ->
 
 hex_to_bin([A, B | T], R) ->
     hex_to_bin(T, [digit(A)*16+digit(B)|R]).
+
+bin_to_hex(B) ->
+    bin_to_hex(B, "").
+
+bin_to_hex(B, D) ->
+    string:join([io_lib:format("~2.16.0b", [X]) || <<X>> <= B ], D).
 
 print_tx_file(F) ->
     {ok, TX_raw} = file:read_file(F),

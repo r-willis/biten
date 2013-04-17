@@ -135,7 +135,7 @@ take_random(_, [], _, Acc) ->
     Acc;
 
 take_random(N, L, Len, Acc) when N >= Len ->
-    Acc ++ L;
+    L ++ Acc;
 
 take_random(0, _, _, Acc) ->
     Acc;

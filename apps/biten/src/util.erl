@@ -158,3 +158,10 @@ random_element(List) ->
 random_element(List, Len) ->
     R = random:uniform(Len),
     lists:nth(R, List).
+
+random_match(A, B) ->
+    N = min(length(A), length(B)),
+    random_match(A, B, N).
+
+random_match(A, B, N) ->
+    lists:zip(take_random(N, A), take_random(N, B)).

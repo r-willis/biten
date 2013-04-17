@@ -9,7 +9,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, get_peer_count/0, notify/1, send_all/1, register/1, print/0, stop/0]).
+-export([start_link/0, get_peer_count/0, get_peer_list/0, notify/1, send/2, send_random/1, send_all/1, register/1, print/0, stop/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -28,6 +28,10 @@ start_link() ->
 get_peer_count() ->
     gen_server:call(?SERVER, get_peer_count).
 
+%%
+get_peer_list() ->
+    gen_server:call(?SERVER, get_peer_list).
+
 %% @doc Handle addr message
 notify({new_peers, L}) ->
     gen_server:cast(?SERVER, {new_peers, L}).
@@ -36,9 +40,17 @@ notify({new_peers, L}) ->
 register(Pid) ->
     gen_server:cast(?SERVER, {register, Pid}).
 
+%% @doc Send message to single peer
+send(Peer, Data) ->
+    gen_server:cast(?SERVER, {send, Peer, Data}).
+
 %% @doc Send message to all peers
 send_all(Data) ->
     gen_server:cast(?SERVER, {send_all, Data}).
+
+%% @doc Send message to random peer
+send_random(Data) ->
+    gen_server:cast(?SERVER, {send_random, Data}).
 
 %% @doc Print current peer cout 
 print() ->
@@ -66,6 +78,9 @@ init([]) ->
 handle_call(get_peer_count, _From, S) ->
     {reply, {ok, S#state.peer_count}, S};
 
+handle_call(get_peer_list, _From, S) ->
+    {reply, {ok, S#state.peer_list}, S};
+
 handle_call(_Request, _From, S) ->
     {reply, ok, S}.
 
@@ -89,9 +104,19 @@ handle_cast({register, Pid}, S) ->
     _Ref = erlang:monitor(process, Pid),
     {noreply, S#state{peer_count = N, peer_list = [Pid|L]}};
 
+handle_cast({send, P, B}, S) ->
+    P ! {send, B},
+    {noreply, S};
+
 handle_cast({send_all, B}, S) ->
     %io:format("sending to all peers ~p bytes~n", [size(B)]),
     [ Pid ! {send, B} || Pid <- S#state.peer_list],
+    {noreply, S};
+
+handle_cast({send_random, B}, S) ->
+    L =  S#state.peer_list,
+    %% FIXME not scalable
+    util:random_element(L) ! {send, B},
     {noreply, S};
 
 handle_cast(print, S) ->

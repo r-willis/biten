@@ -6,6 +6,7 @@
 
 -module(util).
 -export([print_tx_file/1, hexdump/1, hex_to_bin/1, to_base58/1, base58_enc/2, ip_to_str/1, crc_to_str/1, senddump/1, startdump/0, dump/0, strftime/1]).
+-export([take_random/2, take_random/3, random_element/1, random_element/2]).
 
 hexdump(B) -> hexdump(B, 0).
 
@@ -115,3 +116,39 @@ print_tx_file(F) ->
     {ok, TX_raw} = file:read_file(F),
     {_, _, TX, _} = protocol:get_message(TX_raw),
     io:format("~s", [protocol:format_tx(protocol:parse_tx(TX))]).
+
+%% take at most N random elements from list
+%% runtime proportional to length of the list
+take_random(N, List) ->
+    take_random(N, List, length(List)).
+
+take_random(N, List, Len) ->
+    take_random(N, List, Len, []).
+
+take_random(_, [], _, Acc) ->
+    Acc;
+
+take_random(N, L, Len, Acc) when N >= Len ->
+    Acc ++ L;
+
+take_random(0, _, _, Acc) ->
+    Acc;
+
+take_random(1, L, Len, Acc) ->
+    [random_element(L, Len) | Acc];
+
+take_random(N, [H | T], Len, Acc) ->
+    R = random:uniform(Len),
+    case N >= R of
+        true ->
+            take_random(N-1, T, Len-1, [H | Acc]);
+        false ->
+            take_random(N, T, Len-1, Acc)
+    end.
+
+random_element(List) ->
+    random_element(List, length(List)).
+
+random_element(List, Len) ->
+    R = random:uniform(Len),
+    lists:nth(R, List).

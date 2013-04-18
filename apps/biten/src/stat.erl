@@ -87,13 +87,13 @@ handle_cast({increment, Counter, N}, S) ->
 handle_cast(print, S) ->
     io:format("Start time..~s UTC~n", [util:strftime(S#state.start_time)]),
     io:format("Cur time....~s UTC~n", [util:strftime(calendar:universal_time())]),
-    io:format("Connects:...~b~n", [S#state.connects]),
-    io:format("Connected:..~b~n", [S#state.connected]),
-    io:format("Accepted:...~b~n", [S#state.accepted]),
-    io:format("Answers:....~b~n", [S#state.answer]),
+    io:format("Connects....~b~n", [S#state.connects]),
+    io:format("Connected...~b~n", [S#state.connected]),
+    io:format("Accepted....~b~n", [S#state.accepted]),
+    io:format("Answers.....~b~n", [S#state.answer]),
     {ok, Npeer} = netmanager:get_peer_count(),
     io:format("Cur peers...~b~n", [Npeer]),
-    io:format("Relayed TX:.~b~n", [S#state.relayed_tx]),
+    io:format("Relayed TX..~b~n", [S#state.relayed_tx]),
     io:format("Mempool:~n", []),
     try mempool:get_stats() of
         {N1, N2, N3, N4, T1, T2, T3, T4} ->
@@ -110,10 +110,10 @@ handle_cast(print, S) ->
             io:format(" exception: ~p:~p~n", [Error, Reason])
     end,
     io:format("Connection_errors:~n", []),
-    io:format(" timeout:...~p~n", [S#state.error_timedout]), 
-    io:format(" refused:...~p~n", [S#state.error_connrefused]), 
-    io:format(" unreach:...~p~n", [S#state.error_hostunreach]), 
-    io:format(" other:.....~b~n", [S#state.error]),
+    io:format(" timeout....~p~n", [S#state.error_timedout]), 
+    io:format(" refused....~p~n", [S#state.error_connrefused]), 
+    io:format(" unreach....~p~n", [S#state.error_hostunreach]), 
+    io:format(" other......~b~n", [S#state.error]),
     io:format("Chain:~n", []),
     try chain:get_stats() of
         {N, Size, NReq} ->

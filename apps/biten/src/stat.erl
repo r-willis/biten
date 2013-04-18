@@ -109,11 +109,21 @@ handle_cast(print, S) ->
         Error:Reason ->
             io:format(" exception: ~p:~p~n", [Error, Reason])
     end,
-    io:format("Errors:~n", []),
+    io:format("Connection_errors:~n", []),
     io:format(" timeout:...~p~n", [S#state.error_timedout]), 
     io:format(" refused:...~p~n", [S#state.error_connrefused]), 
     io:format(" unreach:...~p~n", [S#state.error_hostunreach]), 
     io:format(" other:.....~b~n", [S#state.error]),
+    io:format("Chain:~n", []),
+    try chain:get_stats() of
+        {N, Size, NReq} ->
+            io:format(" obj count..~b~n", [N]),
+            io:format(" size.......~.1f MB~n", [Size/1024/1024]),
+            io:format(" requests...~b~n", [NReq])
+    catch
+        Error1:Reason1 ->
+            io:format(" exception: ~p:~p~n", [Error1, Reason1])
+    end,
     {noreply, S};
  
 

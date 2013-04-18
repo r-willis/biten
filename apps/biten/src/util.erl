@@ -7,6 +7,7 @@
 -module(util).
 -export([print_tx_file/1, hexdump/1, hex_to_bin/1, bin_to_hex/1, bin_to_hex/2, to_base58/1, base58_enc/2, ip_to_str/1, crc_to_str/1, senddump/1, startdump/0, dump/0, strftime/1]).
 -export([take_random/2, take_random/3, random_element/1, random_element/2, random_match/2, random_match/3]).
+-export([every/2]).
 
 hexdump(B) -> hexdump(B, 0).
 
@@ -165,3 +166,15 @@ random_match(A, B) ->
 
 random_match(A, B, N) ->
     lists:zip(take_random(N, A), take_random(N, B)).
+
+every(N, L) ->
+    lists:reverse(every(N, L, 1, [])).
+
+every(_, [], _, Acc) ->
+    Acc;
+
+every(N, [H | T], K, Acc) when K =:= N ->
+    every(N, T, 1, [H | Acc]);
+
+every(N, [_H | T], K, Acc) when K < N ->
+    every(N, T, K + 1, Acc).

@@ -93,6 +93,13 @@ handle_cast({got_inv, P, L, Time}, S) ->
     T_PEER = S#state.t_peer,
     N = length(ets:lookup(T_PEER, P)),
     L1 = [ X || {Type, Hash} = X <- L, Type =:= 1, ets:lookup(T_TX, Hash) =:= []],
+    L1_BLOCKS = [ Hash || {Type, Hash} <- L, Type =:= 2],
+    case length(L1_BLOCKS) of
+        0 ->
+            ok;
+        _ ->
+            chain:got_inv(P, L1_BLOCKS)
+    end,
     %% Relying on the fact that N =< MAX_INV_PER_PEER (at list, should be)
     L2 = lists:sublist(L1, ?MAX_INV_PER_PEER - N),
     [ ets:insert(T_INV, {Hash, Type, P, Time}) || {Type, Hash} <- L2 ],

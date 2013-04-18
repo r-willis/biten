@@ -131,6 +131,9 @@ parse_headers(B) ->
 parse_block_header(<<Ver:32/little, PrevBlock:32/bytes, MerkleRoot:32/bytes, Time:32/little, Diff:4/bytes, Nonce:32/little>>) -> 
     {Ver, PrevBlock,  MerkleRoot, Time, Diff, Nonce}.
 
+prev_block_header(<<_:4/bytes, PrevBlock:32/bytes, _:44/bytes>>) -> 
+    PrevBlock.
+
 parse_inv(B) ->
     {N, R} = parse_varint(B),
     {ok, N, [{T,H} || <<T:32/little, H:32/bytes>> <= R ]}.

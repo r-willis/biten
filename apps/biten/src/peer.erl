@@ -79,9 +79,10 @@ loop(#peer{state = loop} = P) ->
             case protocol:get_message(D) of
                 {ok, Hdr, Payload, NewRest} ->
                     {ok, _, Cmd, _, CRC} = protocol:parse_header(Hdr),
+                    %% store each unknown packet
                     case lists:member(Cmd, [unknown]) of
                         true ->
-                            F = io_lib:format("dump/dump_~s_~s_~s.bin", [atom_to_list(Cmd), util:ip_to_str(Host), util:crc_to_str(CRC)]),
+                            F = io_lib:format("data/dump/dump_~s_~s_~s.bin", [atom_to_list(Cmd), util:ip_to_str(Host), util:crc_to_str(CRC)]),
                             file:write_file(F, [Hdr, Payload]);
                         false -> ok
                     end,
@@ -110,6 +111,9 @@ loop(#peer{state = loop} = P) ->
                      getdata -> 
                             {ok, _N, L} = protocol:parse_getdata(Payload),
                             mempool:got_getdata(L);
+                     headers -> 
+                            {ok, _N, L} = protocol:parse_headers(Payload),
+                            chain:got_headers(L);
                            _ ->
                              ok
                     end;

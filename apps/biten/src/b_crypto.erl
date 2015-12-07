@@ -9,7 +9,7 @@
 -compile(export_all).
 
 hash(Bin) ->
-	erlsha2:sha256(erlsha2:sha256(Bin)).
+	crypto:hash(sha256, crypto:hash(sha256, Bin)).
 
 crc(Bin) ->
 	<<CRC:4/binary, _/binary>> = hash(Bin),
